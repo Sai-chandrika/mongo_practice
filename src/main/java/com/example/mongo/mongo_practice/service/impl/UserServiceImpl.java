@@ -72,12 +72,14 @@ public class UserServiceImpl implements UserService {
             userData.setLocation(user.getLocation());
         }
         if(user.getEmail()!=null){
-            String message= emailVerification(user.getEmail());
-            if(message.equals("email is already existed")) throw new DuplicateDataException("user already existed with given this email");
-            if(Boolean.TRUE.equals(Validation.isValidEmailPattern(user.getEmail()))) {
-                userData.setEmail(user.getEmail());
-            }else {
-                throw new DuplicateDataException("please provide valid email");
+            if(Boolean.TRUE.equals(uniqueEmailValidation(user))) {
+                if (Boolean.TRUE.equals(Validation.isValidEmailPattern(user.getEmail()))) {
+                    userData.setEmail(user.getEmail());
+                } else {
+                    throw new InvalidDataException("please provide valid email");
+                }
+            }else{
+                throw new DuplicateDataException("email is already existed..");
             }
         }
         if(user.getContact()!=null){
@@ -93,19 +95,18 @@ public class UserServiceImpl implements UserService {
     }
 
 
-
-
-
     public UserData userDtoToUser(UserDto dto){
         UserData userData=new UserData();
         userData.setName(dto.getName());
-        String message= emailVerification(dto.getEmail());
-        if(message.equals("email is already existed")) throw new DuplicateDataException("user already existed with given this email");
-        if(Boolean.TRUE.equals(Validation.isValidEmailPattern(dto.getEmail()))) {
-            userData.setEmail(dto.getEmail());
-        }else {
-            throw new DuplicateDataException("please provide valid email");
-        }
+       if(Boolean.TRUE.equals(uniqueEmailValidation(dto))) {
+           if (Boolean.TRUE.equals(Validation.isValidEmailPattern(dto.getEmail()))) {
+               userData.setEmail(dto.getEmail());
+           } else {
+               throw new InvalidDataException("please provide valid email");
+           }
+       }else{
+           throw new DuplicateDataException("email is already existed..");
+       }
         userData.setPassword(bCryptPasswordEncoder.encode(dto.getPassword()));
         userData.setLocation(dto.getLocation());
         userData.setRole(dto.getRole());
@@ -129,13 +130,15 @@ public class UserServiceImpl implements UserService {
         return userDto;
     }
 
-    public String emailVerification(String email){
-        UserData optional=userRepo.findByEmail(email);
-        if(optional!=null){
-            return "email is already existed";
-        }else{
-            return null;
-        }
 
+    private Boolean uniqueEmailValidation(UserDto dto) {
+        if (dto.getEmail() != null) {
+            Optional<UserData> optionalClient = Optional.ofNullable(userRepo.findByEmail(dto.getEmail()));
+            if (optionalClient.isPresent()) {
+                if (dto.getId() != null && dto.getId().equals(optionalClient.get().getId())) {
+                    return Boolean.TRUE;
+                } else return Boolean.FALSE;
+            } else return Boolean.TRUE;
+        } else return null;
     }
 }
